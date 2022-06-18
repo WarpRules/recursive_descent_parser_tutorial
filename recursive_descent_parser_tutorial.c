@@ -42,6 +42,8 @@ In this example implementation the parser also evaluates the result as it is par
 This is done just for the sake of simplicity. The parser can do other things, such as adding the
 tokenized elements of the input into a parsing tree, or generating stack-based bytecode to
 evaluate the expression later (eg. if it contains variables, with different variable values).
+
+Note: There are some exercises for the reader at the end of this file.
 */
 
 #include <stdio.h>
@@ -264,8 +266,8 @@ ValueType parseInputString(struct ParseData *data)
     const ValueType result = parseAddSubtract(data);
     if(data->errorCode) return 0;
 
-    /* If we have not reached the end of the string, that means that there's an
-       invalid syntax at the highest precedence level. We have to check for that. */
+    /* If we have not reached the end of the string, that means that there's an invalid
+       syntax at the lowest ("outermost") precedence level. We have to check for that. */
     data->currentPosition = skipWhitespace(data->currentPosition);
     if(*data->currentPosition) /* There's an invalid non-null non-whitespace character */
         data->errorCode = ParseError_Syntax;
@@ -302,3 +304,62 @@ int main(int argc, char **argv)
     }
     return 0;
 }
+
+
+
+/*-----------------------------------------------------------------------------------------------
+  Exercises for the reader
+  -----------------------------------------------------------------------------------------------
+
+1) Try changing ValueType to 'double' instead of 'long long' in order to support floating point
+   values in the input string syntax. (Hint: You should use strtod() instead of strtoll() in the
+   parseValue() function.)
+
+2) After having successfully done that, implement support for some mathematical functions, such
+   as the trigonometric functions and the square root function, so that the input string can be
+   for example:
+
+     "sin(1.5) + 2*cos(2.2)"
+
+   (Hint: This is easier than it might sound at first: The name of the function should be
+   parsed in the parseValue() function, and if a supported function name appears, check
+   that the next (non-whitespace) character is an opening parenthesis, and then parse an
+   expression in parentheses by calling that parsing function.)
+
+   You could also implement support for named constants, such as "pi" (so that the input
+   string can be for example ("sin(pi) + cos(2*pi) - 3*pi").
+
+3) Implement support for variables. For example the variables 'x' and 'y'. Change the main()
+   function so that the values of these variables can be specified in the command like, for
+   example like:
+
+     ./thisprogram 'x*x+y*y-10' 5 7
+
+   (where the second parameter specifies the value of 'x' and the third the value of 'y'.
+   Or any other command line syntax you prefer.)
+
+4) Note that due to how the parser is implemented above, the following input strings are
+   considered valid: "2--5", "2---5", "--5"
+   but these will not: "2----5", "---5", "--(5)"
+
+   4a) Why is this happening?
+       (Hint: For example in the case of "2---5" this is because the first '-' is parsed as
+       the binary operator '-', the second '-' will be parsed as a unary '-', and the third
+       '-' is parsed by strtoll(). A fourth '-' will be too much and will be considered a
+       syntax error because there's nothing accepting it as valid.)
+
+   4b) This isn't something that's usually desirable in this kind of arithmetic formats.
+       Try changing the implementation so that multiple consecutive minus signs are handled
+       appropriately. (It's a matter of preference whether "1 - -2" should be considered valid
+       or invalid syntax. However, "1 - - -2" should definitely be considered invalid.)
+       (Note that this is not absolutely trivial and may make the code a bit more complicated.)
+
+5) Note that due to the precedence order used in this example implementation, an input string
+   like "-2^4" will be parsed as if it were "(-2)^4" (resulting in 16). Most often this kind of
+   expression should be interpreted as if it were "-(2^4)" (resulting in -16) instead.
+   Try modifying the code to make this happen.
+   Note, however, that an input string like "-2^-(1+3)" should still be valid (and evaluate
+   to 0 if using integers, or -0.0625 if using floating point). For this reason this cannot
+   be achieved by merely switching the precedences of the ^ operator and the unary minus.
+   (Simply switching the precedences would make "2^-(1+3)" issue a syntax error.)
+*/
